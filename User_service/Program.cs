@@ -1,3 +1,5 @@
+using User_service.Common;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -12,6 +14,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+//Use DirectAccessProtectionMiddleware
+app.UseMiddleware<DirectAccessProtectionMiddleware>();
 
 app.MapControllers();
 
