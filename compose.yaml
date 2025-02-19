@@ -4,3 +4,9 @@
     build:
       context: .
       dockerfile: Appointment_MS/Dockerfile
+
+  user_service:
+    image: user_service
+    build:
+      context: .
+      dockerfile: User_service/Dockerfile
