@@ -36,11 +36,11 @@ public class DirectAccessProtectionMiddleware
     {
         try
         {
-            string secretKey = "Application-Management-1234567890"; //TODO Need to load from the appsettings file
-        
+            string secretKey = AppSettings.GatewaySecretKey;
+            
             //Get the time stamp and previous hash from the header
-            context.Request.Headers.TryGetValue("X-Gateway-Timestamp", out var timeStamp); 
-            context.Request.Headers.TryGetValue("X-Gateway-Signature", out var receivedSignature);
+            context.Request.Headers.TryGetValue(AppSettings.TimeStampHeaderKey, out var timeStamp); 
+            context.Request.Headers.TryGetValue(AppSettings.SignatureHeaderKey, out var receivedSignature);
         
             string data = timeStamp;
             using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey)))
