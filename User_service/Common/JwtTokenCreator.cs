@@ -10,19 +10,20 @@ public class JwtTokenCreator
 {
     public string CreateJwtToken(LoggedUser loggedUser)
     {
-        var key = Encoding.ASCII.GetBytes("Application-Management-1234567890"); //TODO Need to add this for app settings
+        var key = Encoding.ASCII.GetBytes(AppSettings.JwtSecretKey);
 
         //Claims
         var claims = new[]
         {
-            new Claim("username", loggedUser.UserName),
-            new Claim("email", loggedUser.Email)
+            new Claim(AppSettings.ClaimUserName, loggedUser.UserName),
+            new Claim(AppSettings.ClaimsUserId, loggedUser.Email),
+            new Claim(AppSettings.ClaimUserRole, loggedUser.Email)
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddDays(7), // TODO need to add this for appsettings file
+            Expires = DateTime.UtcNow.AddDays(AppSettings.JwtTokenExpiration),
             SigningCredentials =
                 new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
