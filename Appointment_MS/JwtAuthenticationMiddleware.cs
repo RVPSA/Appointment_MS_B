@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
@@ -29,30 +30,38 @@ public class JwtAuthenticationMiddleware
             return;
         }
 
-        if (!context.Request.Cookies.TryGetValue("token", out var jwtToken))
+        if (!context.Request.Cookies.TryGetValue(AppSettings.CookieName, out var jwtToken))
         {
             context.Response.StatusCode = 401; // Unauthorized
             return;
         }
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes("Application-Management-1234567890");//TODO need to load this for appsettings file
-
+        
         try
         {
-            var claimsPrincipal = tokenHandler.ValidateToken(jwtToken,
-                new TokenValidationParameters
+            IIdentity identity = ReadJwtToken(jwtToken,context,out var securityToken);
+            if (securityToken != null)
+            {
+                if (securityToken.ValidTo < DateTime.UtcNow)
                 {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
-                    ValidateIssuer = false,
-                    ValidateAudience = false,
-                }, out _);
+                    context.Response.StatusCode = 401; // Unauthorized
+                    return;
+                }
+            
+                CookieOptions options = new CookieOptions();
+                options.Expires = DateTime.Now.AddMinutes(AppSettings.CookieExpires);
+                options.HttpOnly = true;
+                options.Path = AppSettings.CookiePath;
+                options.Secure = true;
+                options.SameSite = SameSiteMode.None;
+                options.Domain = AppSettings.CookieDomain;
 
-            var claims = claimsPrincipal.Claims;
-            context.Request.Headers["UserId"] = claims.FirstOrDefault(c => c.Type == "UserId")?.Value ?? "";
-            context.Request.Headers["UserRole"] = claims.FirstOrDefault(c => c.Type == "role")?.Value ?? "";
-            EncryptGatewaySecret(context); //Add GatewaySecret to the request header
+                context.Response.Cookies.Append(AppSettings.CookieName, jwtToken, options);
+            }
+            else
+            {
+                context.Response.StatusCode = 401; // Unauthorized
+                return;
+            }
         }
         catch
         {
@@ -63,21 +72,58 @@ public class JwtAuthenticationMiddleware
         await _next(context);
     }
 
+    //Encrypt and append GatewaySectet key
     private void EncryptGatewaySecret(HttpContext context)
     {
-        string secretKey = "Application-Management-1234567890"; //TODO Need to load from the appsettings file
-        
+        string secretKey = AppSettings.GatewaySecretKey;
         string timeStamp = DateTime.UtcNow.ToString("o");
-        
         string data = timeStamp;
-        using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey)))
+        
+        try
         {
-            byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
-            string signature =  Convert.ToBase64String(hash);
+            using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey)))
+            {
+                byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
+                string signature =  Convert.ToBase64String(hash);
             
-            //Add timestamp and the signature into the header
-            context.Request.Headers["X-Gateway-Timestamp"] = timeStamp; //TODO Need to load from appsettings
-            context.Request.Headers["X-Gateway-Signature"] = signature; //TODO Need to load from appsettings
+                //Add timestamp and the signature into the header
+                context.Request.Headers[AppSettings.TimeStampHeaderKey] = timeStamp; 
+                context.Request.Headers[AppSettings.SignatureHeaderKey] = signature;
+            }
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    private IIdentity ReadJwtToken(string jwtToken, HttpContext context, out SecurityToken securityToken)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.ASCII.GetBytes(AppSettings.JwtSecretKey);
+        try
+        {
+            var claimsPrincipal = tokenHandler.ValidateToken(jwtToken,
+                new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                }, out var tokenSecure);
+
+            var claims = claimsPrincipal.Claims;
+            //Adding headers for future usage
+            context.Request.Headers[AppSettings.UserIdKey] = claims.FirstOrDefault(c => c.Type == AppSettings.ClaimsUserId)?.Value ?? "";
+            context.Request.Headers[AppSettings.UserRoleKey] = claims.FirstOrDefault(c => c.Type == AppSettings.ClaimUserRole)?.Value ?? "";
+            EncryptGatewaySecret(context); //Add GatewaySecret to the request header
+        
+            securityToken = tokenSecure;
+            return claimsPrincipal.Identity;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
         }
     }
 }
