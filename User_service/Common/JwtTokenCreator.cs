@@ -10,14 +10,18 @@ public class JwtTokenCreator
 {
     public string CreateJwtToken(LoggedUser loggedUser)
     {
-        var key = Encoding.ASCII.GetBytes(AppSettings.JwtSecretKey);
+        var key = Encoding.ASCII.GetBytes(AppSettings.JwtSecretKey ??
+                                          throw new InvalidOperationException("JWT_SECRET is not set."));
 
         //Claims
         var claims = new[]
         {
-            new Claim(AppSettings.ClaimUserName, loggedUser.UserName),
-            new Claim(AppSettings.ClaimsUserId, loggedUser.Email),
-            new Claim(AppSettings.ClaimUserRole, loggedUser.Email)
+            new Claim(AppSettings.ClaimUserName ??
+                      throw new InvalidOperationException("Claim name is not set."), loggedUser.UserName),
+            new Claim(AppSettings.ClaimsUserId ??
+                      throw new InvalidOperationException("Claim name is not set."), loggedUser.Email),
+            new Claim(AppSettings.ClaimUserRole ??
+                      throw new InvalidOperationException("Claim name is not set."), loggedUser.Email)
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor

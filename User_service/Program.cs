@@ -13,16 +13,15 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    Env.Load();
+    Env.Load(); //Load environment configurations
     app.MapOpenApi();
 }
-//Load Environment variables
-builder.Configuration.AddEnvironmentVariables();
-//Call Configuration method
-LoadConfiguration();
 
-//Use DirectAccessProtectionMiddleware
-app.UseMiddleware<DirectAccessProtectionMiddleware>();
+builder.Configuration.AddEnvironmentVariables(); //Load Environment variables
+
+LoadConfiguration(); //Call Configuration method
+
+app.UseMiddleware<DirectAccessProtectionMiddleware>(); //Use DirectAccessProtectionMiddleware
 
 app.MapControllers();
 

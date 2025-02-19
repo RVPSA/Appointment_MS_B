@@ -5,34 +5,29 @@ using Ocelot.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//Add Ocelot json configuration file
-builder.Configuration.AddJsonFile("Ocelot.json",optional:false,reloadOnChange:true);
+builder.Configuration.AddJsonFile("Ocelot.json",optional:false,reloadOnChange:true); //Add Ocelot json configuration file
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-//Add Ocelot api gateway service
-builder.Services.AddOcelot();
+builder.Services.AddOcelot(); //Add Ocelot api gateway service
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    Env.Load();
+    Env.Load(); //Load .env file
     app.MapOpenApi();
 }
-builder.Configuration.AddEnvironmentVariables();
+builder.Configuration.AddEnvironmentVariables(); //Load environment variables
 
-//Call Configuration method
-LoadConfiguration();
+LoadConfiguration(); //Call Configuration method
 
-//Use JwtAuthenticationMiddleware as a middleware in gateway
-app.UseMiddleware<JwtAuthenticationMiddleware>();
+app.UseMiddleware<JwtAuthenticationMiddleware>(); //Use JwtAuthenticationMiddleware as a middleware in gateway
 
-//Use ocelot
-app.UseOcelot().Wait();
+app.UseOcelot().Wait(); //Use ocelot
 
 app.Run();
 

@@ -1,33 +1,28 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
-using System.Security.Principal;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Appointment_MS;
 
-public class JwtAuthenticationMiddleware
+public class JwtAuthenticationMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next;
-
-    private readonly List<string> _publicRoutes = AppSettings.PublicRoutes;
-
-    public JwtAuthenticationMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
+    private readonly List<string> _publicRoutes = AppSettings.PublicRoutes ?? new List<string>();
 
     public async Task Invoke(HttpContext context)
     {
         // Allow public routes to pass through without authentication
-        if (_publicRoutes.Contains(context.Request.Path.Value.ToLower()))
+        if (_publicRoutes.Contains(context.Request.Path.Value?.ToLower() 
+                                   ?? throw new InvalidOperationException("No path value")))
         {
             EncryptGatewaySecret(context); //Add GatewaySecret to the request header
-            await _next(context);
+            await next(context);
             return;
         }
 
-        if (!context.Request.Cookies.TryGetValue(AppSettings.CookieName, out var jwtToken))
+        if (!context.Request.Cookies.TryGetValue(AppSettings.CookieName 
+                                                 ?? throw new InvalidOperationException("No Cookie name")
+                , out var jwtToken))
         {
             context.Response.StatusCode = 401; // Unauthorized
             return;
@@ -35,30 +30,25 @@ public class JwtAuthenticationMiddleware
         
         try
         {
-            IIdentity identity = ReadJwtToken(jwtToken,context,out var securityToken);
-            if (securityToken != null)
-            {
+            ReadJwtToken(jwtToken,context,out var securityToken);
                 if (securityToken.ValidTo < DateTime.UtcNow)
                 {
                     context.Response.StatusCode = 401; // Unauthorized
                     return;
                 }
             
-                CookieOptions options = new CookieOptions();
-                options.Expires = DateTime.Now.AddMinutes(AppSettings.CookieExpires);
-                options.HttpOnly = true;
-                options.Path = AppSettings.CookiePath;
-                options.Secure = true;
-                options.SameSite = SameSiteMode.None;
-                options.Domain = AppSettings.CookieDomain;
+                CookieOptions options = new CookieOptions
+                {
+                    Expires = DateTime.Now.AddMinutes(AppSettings.CookieExpires),
+                    HttpOnly = true,
+                    Path = AppSettings.CookiePath,
+                    Secure = true,
+                    SameSite = SameSiteMode.None,
+                    Domain = AppSettings.CookieDomain
+                };
 
                 context.Response.Cookies.Append(AppSettings.CookieName, jwtToken, options);
-            }
-            else
-            {
-                context.Response.StatusCode = 401; // Unauthorized
-                return;
-            }
+            
         }
         catch
         {
@@ -66,61 +56,48 @@ public class JwtAuthenticationMiddleware
             return;
         }
 
-        await _next(context);
+        await next(context);
     }
 
-    //Encrypt and append GatewaySectet key
+    //Encrypt and append GatewaySecret key
     private void EncryptGatewaySecret(HttpContext context)
     {
-        string secretKey = AppSettings.GatewaySecretKey;
+        string secretKey = AppSettings.GatewaySecretKey ?? throw new InvalidOperationException("GatewaySecretKey is not set");
         string timeStamp = DateTime.UtcNow.ToString("o");
         string data = timeStamp;
-        
-        try
-        {
-            using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey)))
-            {
-                byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
-                string signature =  Convert.ToBase64String(hash);
+
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey));
+        byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
+        string signature =  Convert.ToBase64String(hash);
             
-                //Add timestamp and the signature into the header
-                context.Request.Headers[AppSettings.TimeStampHeaderKey] = timeStamp; 
-                context.Request.Headers[AppSettings.SignatureHeaderKey] = signature;
-            }
-        }
-        catch (Exception ex)
-        {
-            throw ex;
-        }
+        //Add timestamp and the signature into the header
+        context.Request.Headers[AppSettings.TimeStampHeaderKey ?? throw new InvalidOperationException("Time stamp header key is not set")] = timeStamp; 
+        context.Request.Headers[AppSettings.SignatureHeaderKey ?? throw new InvalidOperationException("Signature key is not set")] = signature;
     }
 
-    private IIdentity ReadJwtToken(string jwtToken, HttpContext context, out SecurityToken securityToken)
+    private void ReadJwtToken(string jwtToken, HttpContext context, out SecurityToken securityToken)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(AppSettings.JwtSecretKey);
-        try
-        {
-            var claimsPrincipal = tokenHandler.ValidateToken(jwtToken,
-                new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(key),
-                    ValidateIssuer = false,
-                    ValidateAudience = false,
-                }, out var tokenSecure);
+        var key = Encoding.ASCII.GetBytes(AppSettings.JwtSecretKey 
+                                          ?? throw new InvalidOperationException("JwtSecretKey is not set"));
+        var claimsPrincipal = tokenHandler.ValidateToken(jwtToken,
+            new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+            }, out var tokenSecure);
 
-            var claims = claimsPrincipal.Claims;
-            //Adding headers for future usage
-            context.Request.Headers[AppSettings.UserIdKey] = claims.FirstOrDefault(c => c.Type == AppSettings.ClaimsUserId)?.Value ?? "";
-            context.Request.Headers[AppSettings.UserRoleKey] = claims.FirstOrDefault(c => c.Type == AppSettings.ClaimUserRole)?.Value ?? "";
-            EncryptGatewaySecret(context); //Add GatewaySecret to the request header
+        var claims = claimsPrincipal.Claims;
+        //Adding headers for future usage
+        var enumerable = claims.ToList();
+        context.Request.Headers[AppSettings.UserIdKey ?? throw new InvalidOperationException("UserId key is not set")] 
+            = enumerable.FirstOrDefault(c => c.Type == AppSettings.ClaimsUserId)?.Value ?? "";
+        context.Request.Headers[AppSettings.UserRoleKey ?? throw new InvalidOperationException("userRole key is not set")] 
+            = enumerable.FirstOrDefault(c => c.Type == AppSettings.ClaimUserRole)?.Value ?? "";
+        EncryptGatewaySecret(context); //Add GatewaySecret to the request header
         
-            securityToken = tokenSecure;
-            return claimsPrincipal.Identity;
-        }
-        catch (Exception ex)
-        {
-            throw ex;
-        }
+        securityToken = tokenSecure;
     }
 }

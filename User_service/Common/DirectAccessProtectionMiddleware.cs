@@ -3,15 +3,8 @@ using System.Text;
 
 namespace User_service.Common;
 
-public class DirectAccessProtectionMiddleware
+public class DirectAccessProtectionMiddleware(RequestDelegate next) //Primary constructor
 {
-    private readonly RequestDelegate _next;
-
-    public DirectAccessProtectionMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
-
     public async Task Invoke(HttpContext httpContext)
     {
         try
@@ -23,9 +16,9 @@ public class DirectAccessProtectionMiddleware
                 httpContext.Response.StatusCode = 401;
                 return;
             }
-            await _next(httpContext);
+            await next(httpContext);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             httpContext.Response.StatusCode = 401; // Unauthorized
         }
@@ -34,28 +27,22 @@ public class DirectAccessProtectionMiddleware
     
     private bool EncryptGatewaySecret(HttpContext context)
     {
-        try
-        {
-            string secretKey = AppSettings.GatewaySecretKey;
+        string secretKey = AppSettings.GatewaySecretKey ?? throw new InvalidOperationException("Gateway secret key is not set");
             
-            //Get the time stamp and previous hash from the header
-            context.Request.Headers.TryGetValue(AppSettings.TimeStampHeaderKey, out var timeStamp); 
-            context.Request.Headers.TryGetValue(AppSettings.SignatureHeaderKey, out var receivedSignature);
+        //Get the time stamp and previous hash from the header
+        context.Request.Headers.TryGetValue(AppSettings.TimeStampHeaderKey 
+                                            ?? throw new InvalidOperationException("Timestamp header key is not set")
+                                , out var timeStamp); 
+        context.Request.Headers.TryGetValue(AppSettings.SignatureHeaderKey 
+                                            ?? throw new InvalidOperationException("Signature header key is not set")
+                                , out var receivedSignature);
         
-            string data = timeStamp;
-            using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey)))
-            {
-                byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
-                string signature =  Convert.ToBase64String(hash);
+        string data = timeStamp!; //Saying timestamp can not be null
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey));
+        byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
+        string signature =  Convert.ToBase64String(hash);
             
-                //Comapre equality of new and previous hash
-                return string.Equals(signature, receivedSignature);
-            }
-        }
-        catch (Exception ex)
-        {
-            throw ex;
-        }
-        
+        //Compare equality of new and previous hash
+        return string.Equals(signature, receivedSignature);
     }
 }
