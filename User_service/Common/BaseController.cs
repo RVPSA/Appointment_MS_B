@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 using User_service.BusinessObjects.Response;
+using User_service.BusinessObjects.Session;
 
 namespace User_service.Common;
 
@@ -23,5 +25,14 @@ public class BaseController:Controller
             Message = message,
             SubMessage = subMessage
         };
+    }
+
+    public Session GetSession()
+    {
+        Session session = new Session();
+        if (!StringValues.IsNullOrEmpty(HttpContext.Request.Headers[AppSettings.UserIdKey!]))
+            session.UserId = HttpContext.Request.Headers["userId"].ToString();
+
+        return session;
     }
 }
