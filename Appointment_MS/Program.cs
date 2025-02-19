@@ -50,7 +50,7 @@ void LoadConfiguration()
     
     AppSettings.GatewaySecretKey = Environment.GetEnvironmentVariable("GATEWAY_SECRET");
     
-    AppSettings.PublicRoutes = [builder.Configuration.GetSection("PublicRoutes").Value];
+    AppSettings.PublicRoutes = builder.Configuration.GetSection("PublicRoutes:Routes").Get<List<string>>();
     
     AppSettings.TimeStampHeaderKey = builder.Configuration.GetSection("HeadersList:TimeStampHeaderKey").Value;
     AppSettings.SignatureHeaderKey = builder.Configuration.GetSection("HeadersList:SignatureHeaderKey").Value;

@@ -10,10 +10,7 @@ public class JwtAuthenticationMiddleware
 {
     private readonly RequestDelegate _next;
 
-    private readonly List<string> _publicRoutes = new()
-    {
-        "/api/user/login" //TODO Need to load from appsettings
-    };
+    private readonly List<string> _publicRoutes = AppSettings.PublicRoutes;
 
     public JwtAuthenticationMiddleware(RequestDelegate next)
     {
