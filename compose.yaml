@@ -1,0 +1,6 @@
+﻿services:
+  appointment_ms:
+    image: appointment_ms
+    build:
+      context: .
+      dockerfile: Appointment_MS/Dockerfile
