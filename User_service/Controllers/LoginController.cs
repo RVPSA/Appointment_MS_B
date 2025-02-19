@@ -42,12 +42,12 @@ public class LoginController : Controller
     private void CreateCookie(string token)
     {
         var options = new CookieOptions();
-        options.Expires = DateTime.Now.AddMinutes(20); //TODO Need to add this for appsettings file
+        options.Expires = DateTime.Now.AddMinutes(AppSettings.CookieExpires);
         options.HttpOnly = true;
-        options.Path = "/";
+        options.Path = AppSettings.CookiePath;
         options.Secure = true;
         options.SameSite = SameSiteMode.None;
-        options.Domain = "localhost";
-        Response.Cookies.Append("token", token, options); //TODO Need to add for appsettings file
+        options.Domain = AppSettings.CookieDomain;
+        Response.Cookies.Append(AppSettings.CookieName, token, options);
     }
 }
