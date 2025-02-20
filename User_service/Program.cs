@@ -48,5 +48,7 @@ void LoadConfiguration()
     AppSettings.ClaimsUserId = builder.Configuration.GetSection("Claims:ClaimsUserId").Value;
     AppSettings.ClaimUserRole = builder.Configuration.GetSection("Claims:ClaimUserRole").Value;
     AppSettings.ClaimUserName = builder.Configuration.GetSection("Claims:ClaimUserName").Value;
-    
+
+    AppSettings.ConnectionString = builder.Configuration.GetSection("Database:ConnectionString").Value;
+
 }

@@ -20,4 +20,6 @@ public static class AppSettings
     public static string? ClaimsUserId;
     public static string? ClaimUserRole;
     public static string? ClaimUserName;
+
+    public static string? ConnectionString;
 }
