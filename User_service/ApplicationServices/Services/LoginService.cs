@@ -1,5 +1,8 @@
 using User_service.ApplicationServices.IServices;
 using User_service.BusinessObjects.Login;
+using User_service.DAL;
+using User_service.DAL.DService;
+using User_service.DAL.IDService;
 
 namespace User_service.ApplicationServices.Services;
 
@@ -7,11 +10,31 @@ public class LoginService:ILoginService
 {
     public LoggedUser? Login(LoginUserRequest loginUserRequest)
     {
-        var userName = "demo@123.com";
-        var password = "123456";
+        IDataService dataService = DataServiceCreator.CreateDataService();
 
-        if (loginUserRequest.UserName == userName && loginUserRequest.Password == password)
-            return new LoggedUser { UserName = userName, Email = userName };
-        return null;
+        ILoginDataService loginDataService = new LoginDataService(dataService);
+        try
+        {
+            if (loginUserRequest.UserName != "" && loginUserRequest.Password != "")
+            {
+                var result = loginDataService.Login(loginUserRequest);
+                if (result == null) return null;
+
+                if (loginUserRequest.UserName == result.UserName)
+                {
+                    return result;
+                }
+            }
+            else
+            {
+                return null;
+            }
+            return null;
+        }
+        finally
+        {
+            dataService.CloseConnection();
+        }
+        
     }
 }
