@@ -53,7 +53,7 @@ public class LoginDataService(IDataService dataService) : ILoginDataService
             dbParameters[4] = DataServiceCreator.CreateDbParameter("@email",System.Data.DbType.String,
                 System.Data.ParameterDirection.Input,signUpRequest.Email);
             dbParameters[5] = DataServiceCreator.CreateDbParameter("@role",System.Data.DbType.Int32,
-                System.Data.ParameterDirection.Input,2); //TODO Need to add enum
+                System.Data.ParameterDirection.Input,2); // TODO Need to add enum
             dbParameters[6] = DataServiceCreator.CreateDbParameter("@password",System.Data.DbType.String,
                 System.Data.ParameterDirection.Input,signUpRequest.Password);
             dbParameters[7] = DataServiceCreator.CreateDbParameter("@contactnumber",System.Data.DbType.String,
@@ -65,7 +65,7 @@ public class LoginDataService(IDataService dataService) : ILoginDataService
             dbParameters[10] = DataServiceCreator.CreateDbParameter("@nicnumber",System.Data.DbType.String,
                 System.Data.ParameterDirection.Input,signUpRequest.NicNumber);
             dbParameters[11] = DataServiceCreator.CreateDbParameter("@status",System.Data.DbType.Int32,
-                System.Data.ParameterDirection.Input,1); //TODO Need to add Enum
+                System.Data.ParameterDirection.Input,1); // TODO Need to add enum
             
             DbDataReader dbDataReader = dataService.ExecuteReader("login.AddUserPatient",dbParameters,null);
             
