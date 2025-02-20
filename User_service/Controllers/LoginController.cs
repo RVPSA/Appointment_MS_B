@@ -34,6 +34,23 @@ public class LoginController : BaseController
             return Fail(500,"Login Fail", ex.Message); 
         }
     }
+
+    [HttpPost]
+    public object SignUp([FromBody] SignUpRequest signUpRequest)
+    {
+        LoginService service = new LoginService();
+        try
+        {
+            var result = service.SignUp(signUpRequest);
+            if(result == null) return Fail(404, "Signed Up Fail", "Try again later!");
+
+            return Success(200, "Successfully Signed Up", result);
+        }
+        catch (Exception ex)
+        {
+            return Fail(500,"Login Fail", ex.Message);
+        }
+    }
     
     private void CreateCookie(string token)
     {
