@@ -37,4 +37,21 @@ public class LoginService:ILoginService
         }
         
     }
+
+    public SignedUpUser? SignUp(SignUpRequest signUpRequest)
+    {
+        IDataService dataService = DataServiceCreator.CreateDataService();
+        ILoginDataService loginDataService = new LoginDataService(dataService);
+        try
+        {
+            string encryptPassword = BCrypt.Net.BCrypt.HashPassword(signUpRequest.Password);
+            signUpRequest.Password = encryptPassword;
+            var result = loginDataService.SignUp(signUpRequest);
+            return result;
+        }
+        finally
+        {
+            dataService.CloseConnection();
+        }
+    }
 }
