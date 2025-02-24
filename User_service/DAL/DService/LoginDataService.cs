@@ -22,8 +22,9 @@ public class LoginDataService(IDataService dataService) : ILoginDataService
                 DataReader dataReader = new DataReader(dbDataReader);
                 return new LoggedUser()
                 {
-                    UserName = dataReader.GetString("username"),
+                    UserName = dataReader.GetString("email"),
                     Email = dataReader.GetString("email"),
+                    Password = dataReader.GetString("password")
                 };
             }
 
