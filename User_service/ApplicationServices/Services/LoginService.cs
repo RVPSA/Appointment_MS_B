@@ -20,7 +20,7 @@ public class LoginService:ILoginService
                 var result = loginDataService.Login(loginUserRequest);
                 if (result == null) return null;
 
-                if (loginUserRequest.UserName == result.UserName)
+                if (BCrypt.Net.BCrypt.Verify(loginUserRequest.Password, result.Password))
                 {
                     return result;
                 }
