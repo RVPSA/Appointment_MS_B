@@ -13,6 +13,19 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddOcelot(); //Add Ocelot api gateway service
 
+builder.Services.AddCors(options =>
+{
+    //Allow any origin
+    options.AddPolicy("AllowAnyOrigin", build =>
+    {
+        build.WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+        // .SetIsOriginAllowed(origin => true)
+        .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -24,6 +37,9 @@ if (app.Environment.IsDevelopment())
 builder.Configuration.AddEnvironmentVariables(); //Load environment variables
 
 LoadConfiguration(); //Call Configuration method
+
+//Cors using
+app.UseCors("AllowAnyOrigin");
 
 app.UseMiddleware<JwtAuthenticationMiddleware>(); //Use JwtAuthenticationMiddleware as a middleware in gateway
 
